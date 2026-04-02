@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="public-api-base" content="https://your-public-api-domain.com">
   <title>基金净值可视化看板</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="/static/chart.umd.js"></script>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./static/chart.umd.js"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -18,9 +19,10 @@
         <select id="fundSelector" aria-label="选择基金">
           <option value="">请选择基金</option>
         </select>
-        <button id="refreshBtn" type="button" class="btn btn-secondary" style="display: none;">刷新列表</button>
-        <button id="benchmarkBtn" type="button" class="btn btn-secondary" style="display: none;">同步基准指数</button>
-        <button id="crawlBtn" type="button" class="btn btn-primary" style="display: none;">抓取近 3 天邮件</button>
+        <span class="btn btn-secondary public-badge">GitHub Pages View</span>
+        <button id="refreshBtn" type="button" class="btn btn-secondary" style="display:none;">refresh</button>
+        <button id="benchmarkBtn" type="button" class="btn btn-secondary" style="display:none;">benchmark</button>
+        <button id="crawlBtn" type="button" class="btn btn-secondary" style="display:none;">crawl</button>
       </div>
     </header>
 
@@ -220,6 +222,6 @@
     </section>
   </div>
 
-  <script src="script.js"></script>
+  <script src="./script.js"></script>
 </body>
 </html>
