@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="supabase-url" content="https://dkosimntffdhjkxukikk.supabase.co">
+  <meta name="supabase-publishable-key" content="sb_publishable_qdVPMQlLDm95_3oGYb72Bw_VX6zzFM1">
+  <title>基金净值可视化看板</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./static/chart.umd.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Fund Visual</p>
+        <h1>基金净值可视化看板</h1>
+      </div>
+      <div class="toolbar">
+        <select id="fundSelector" aria-label="选择基金">
+          <option value="">请选择基金</option>
+        </select>
+        <span class="btn btn-secondary public-badge">GitHub Pages View</span>
+        <button id="refreshBtn" type="button" class="btn btn-secondary" style="display:none;">refresh</button>
+        <button id="benchmarkBtn" type="button" class="btn btn-secondary" style="display:none;">benchmark</button>
+        <button id="crawlBtn" type="button" class="btn btn-secondary" style="display:none;">crawl</button>
+      </div>
+    </header>
+
+    <div id="statusBar" class="status-bar"></div>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <span class="summary-label">基金名称</span>
+        <strong class="summary-value summary-name" id="cardName">--</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">最新净值日期</span>
+        <strong class="summary-value" id="cardDate">--</strong>
+      </article>
+      <article class="summary-card emphasis">
+        <span class="summary-label">单位净值</span>
+        <strong class="summary-value" id="cardUnitNav">--</strong>
+      </article>
+      <article class="summary-card emphasis">
+        <span class="summary-label">累计净值</span>
+        <strong class="summary-value" id="cardAccumNav">--</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>净值走势</h2>
+        </div>
+        <div class="panel-tools">
+          <div class="range-group" id="rangeGroup">
+            <button class="range-chip active" type="button" data-range="all">全部</button>
+            <button class="range-chip" type="button" data-range="60">近 3 月</button>
+            <button class="range-chip" type="button" data-range="120">近 6 月</button>
+            <button class="range-chip" type="button" data-range="250">近 1 年</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="metric-grid">
+        <article class="metric-card"><span>累计收益率</span><strong id="cumReturn">--</strong></article>
+        <article class="metric-card"><span>年化收益率</span><strong id="annualReturn">--</strong></article>
+        <article class="metric-card"><span id="benchmarkReturnLabel">主基准累计收益</span><strong id="benchmarkReturn">--</strong></article>
+        <article class="metric-card"><span id="alphaLabel">Alpha</span><strong id="alpha">--</strong></article>
+        <article class="metric-card"><span id="betaLabel">Beta</span><strong id="beta">--</strong></article>
+        <article class="metric-card"><span>夏普比率</span><strong id="sharpe">--</strong></article>
+        <article class="metric-card"><span>胜率</span><strong id="winRate">--</strong></article>
+        <article class="metric-card"><span>盈亏比</span><strong id="profitLossRatio">--</strong></article>
+        <article class="metric-card"><span>收益波动率</span><strong id="volatility">--</strong></article>
+        <article class="metric-card"><span>最大回撤</span><strong id="maxDrawdown">--</strong></article>
+      </div>
+
+      <div class="benchmark-grid" id="benchmarkSummaryGrid">
+        <article class="metric-card benchmark-card-empty">
+          <span>基准收益对比</span>
+          <strong>--</strong>
+        </article>
+      </div>
+
+      <div class="chart-box">
+        <canvas id="fundChart"></canvas>
+      </div>
+
+      <div class="timeline-panel">
+        <div class="timeline-meta">
+          <span data-timeline-role="start-label">--</span>
+          <span data-timeline-role="range-label">Timeline</span>
+          <span data-timeline-role="end-label">--</span>
+        </div>
+        <div class="timeline-slider" data-timeline-role="axis">
+          <div class="timeline-track"></div>
+          <div class="timeline-selection"></div>
+          <input class="timeline-input timeline-input-start" data-timeline-role="start" type="range" min="0" max="0" value="0">
+          <input class="timeline-input timeline-input-end" data-timeline-role="end" type="range" min="0" max="0" value="0">
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>回撤分析</h2>
+        </div>
+        <div class="panel-tools">
+          <label class="benchmark-control" for="benchmarkSelector">
+            <span>主分析基准</span>
+            <select id="benchmarkSelector" aria-label="选择主分析基准">
+              <option value="000300">沪深300</option>
+              <option value="000001">上证指数</option>
+              <option value="000852">中证1000</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="metric-grid">
+        <article class="metric-card"><span>年化波动率</span><strong id="riskAnnualVol">--</strong></article>
+        <article class="metric-card"><span>下行风险</span><strong id="downsideRisk">--</strong></article>
+        <article class="metric-card"><span>回撤修复天数</span><strong id="recoveryDays">--</strong></article>
+        <article class="metric-card"><span>最大单日跌幅</span><strong id="maxSingleDrop">--</strong></article>
+        <article class="metric-card"><span>最长连续亏损</span><strong id="maxConsecLoss">--</strong></article>
+        <article class="metric-card"><span>亏损区间占比</span><strong id="lossRatio">--</strong></article>
+        <article class="metric-card"><span>最大回撤开始</span><strong id="drawdownStart">--</strong></article>
+        <article class="metric-card"><span>最大回撤结束</span><strong id="drawdownEnd">--</strong></article>
+      </div>
+
+      <div class="drawdown-chart-box">
+        <canvas id="drawdownChart"></canvas>
+      </div>
+
+      <div class="timeline-panel">
+        <div class="timeline-meta">
+          <span data-timeline-role="start-label">--</span>
+          <span data-timeline-role="range-label">Timeline</span>
+          <span data-timeline-role="end-label">--</span>
+        </div>
+        <div class="timeline-slider" data-timeline-role="axis">
+          <div class="timeline-track"></div>
+          <div class="timeline-selection"></div>
+          <input class="timeline-input timeline-input-start" data-timeline-role="start" type="range" min="0" max="0" value="0">
+          <input class="timeline-input timeline-input-end" data-timeline-role="end" type="range" min="0" max="0" value="0">
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="tab-nav">
+        <button class="tab-item active" type="button" data-tab="performance">阶段收益</button>
+        <button class="tab-item" type="button" data-tab="return">收益指标</button>
+        <button class="tab-item" type="button" data-tab="risk">风险指标</button>
+        <button class="tab-item" type="button" data-tab="netlist">净值明细</button>
+      </div>
+
+      <div class="tab-content active" id="performanceTab">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>阶段</th>
+              <th>收益率</th>
+            </tr>
+          </thead>
+          <tbody id="performanceBody">
+            <tr><td colspan="2" class="empty-row">请选择基金后查看</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tab-content" id="returnTab">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>指标</th>
+              <th>近 1 周</th>
+              <th>近 1 月</th>
+              <th>近 1 季度</th>
+              <th>近半年</th>
+            </tr>
+          </thead>
+          <tbody id="returnBody">
+            <tr><td colspan="5" class="empty-row">请选择基金后查看</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tab-content" id="riskTab">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>指标</th>
+              <th>近 1 周</th>
+              <th>近 1 月</th>
+              <th>近 1 季度</th>
+              <th>近半年</th>
+            </tr>
+          </thead>
+          <tbody id="riskBody">
+            <tr><td colspan="5" class="empty-row">请选择基金后查看</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tab-content" id="netlistTab">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>净值日期</th>
+              <th>单位净值</th>
+              <th>累计净值</th>
+              <th>日变化</th>
+            </tr>
+          </thead>
+          <tbody id="netlistBody">
+            <tr><td colspan="4" class="empty-row">请选择基金后查看</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="./script.js"></script>
+  <script>
+    function getApiCandidates() {
+      return ["supabase-direct"];
+    }
+
+    async function resolveApiBase() {
+      getSupabaseConfig();
+      return "supabase-direct";
+    }
+
+    function buildApiUrl(path) {
+      return path;
+    }
+
+    function startAutoRefresh() {
+      if (startAutoRefresh.timer) {
+        window.clearInterval(startAutoRefresh.timer);
+      }
+
+      startAutoRefresh.timer = window.setInterval(async () => {
+        try {
+          await initPage(true);
+        } catch (error) {
+          showStatus(`Auto refresh failed: ${error.message}`, "warning", true);
+        }
+      }, AUTO_REFRESH_MS);
+    }
+
+    async function initPage(keepSelection = false) {
+      showStatus("Loading fund list from Supabase...", "info");
+
+      try {
+        const snapshot = await fetchSupabaseSnapshot();
+        state.supabaseFundRows = snapshot.fundRows;
+        state.supabaseBenchmarkRows = snapshot.benchmarkRows;
+        state.fundList = buildFundListFromRows(snapshot.fundRows);
+        state.publicShareMode = true;
+        state.benchmarkOptions = DIRECT_SUPABASE_BENCHMARK_OPTIONS.slice();
+
+        configureAdminActions();
+        renderBenchmarkSelector(state.benchmarkOptions);
+        renderFundSelector(state.fundList);
+
+        if (!state.fundList.length) {
+          resetPage();
+          showStatus("No fund data found in Supabase.", "warning", true);
+          return;
+        }
+
+        let nextFund = state.currentFund;
+        if (!keepSelection || !state.fundList.some((item) => item.short_name === nextFund)) {
+          nextFund = state.fundList[0].short_name;
+        }
+
+        document.getElementById("fundSelector").value = nextFund;
+        state.currentFund = nextFund;
+        await loadFundData(nextFund);
+
+        showStatus(`Data updated at: ${formatDateTimeValue()}`, "success");
+      } catch (error) {
+        resetPage();
+        showStatus(`Failed to load Supabase data: ${error.message}`, "error", true);
+      }
+    }
+
+    async function loadFundData(shortName) {
+      showStatus(`Loading ${shortName} data...`, "info");
+
+      try {
+        const fundRows = (state.supabaseFundRows || []).filter((row) => row.fund_name_short === shortName);
+        if (!fundRows.length) {
+          throw new Error(`Fund data not found: ${shortName}`);
+        }
+
+        const fundPayload = buildFundPayloadFromRows(
+          fundRows,
+          state.supabaseBenchmarkRows || [],
+          state.currentBenchmark
+        );
+
+        if (!fundPayload) {
+          throw new Error(`Failed to build chart data for ${shortName}`);
+        }
+
+        state.rangeData = fundPayload.range_data || null;
+        state.benchmarkOptions = DIRECT_SUPABASE_BENCHMARK_OPTIONS.slice();
+
+        renderBenchmarkSelector(state.benchmarkOptions);
+        renderSummary(state.rangeData);
+        renderTopIndicators(state.rangeData);
+        renderRiskIndicators(state.rangeData);
+        renderPerformanceTable(fundPayload.performance_data || []);
+        renderIndicatorTable("returnBody", fundPayload.return_indicators || []);
+        renderIndicatorTable("riskBody", fundPayload.risk_indicators || []);
+        renderNetValueTable(fundPayload.net_value_list || []);
+        initializeTimeline();
+
+        showStatus(`Loaded Supabase data for ${shortName}.`, "success");
+      } catch (error) {
+        resetPage();
+        showStatus(`Failed to load fund data: ${error.message}`, "error", true);
+      }
+    }
+
+    async function fetchJSON() {
+      throw new Error("GitHub Pages now reads Supabase directly and no longer uses Flask.");
+    }
+  </script>
+</body>
+</html>
